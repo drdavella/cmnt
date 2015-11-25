@@ -1,6 +1,9 @@
 #ifndef _CMNT_LISTER_HPP_
 #define _CMNT_LISTER_HPP_
 
+#include <string>
+
+
 typedef enum sort_type
 {
     DEFAULT_SORT,
