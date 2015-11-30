@@ -14,19 +14,19 @@ all: ${LIBFILE}
 %.o: %.cpp
 	@@ echo
 	@@ echo CREATING OBJECT FILE $@
-	@@ echo -------------------------------------
+	@@ echo ----------------------------------
 	${CC} ${CXXFLAGS} ${INCDIRS} -c -o $@ $^
 
 lib%.a: %.o
 	@@ echo
 	@@ echo PACKAGING STATIC LIBRARY $@
-	@@ echo -------------------------------------
+	@@ echo -----------------------------------------
 	ar rcs $@ $^
 
 install: ${LIBFILE}
 	@@ echo
 	@@ echo INSTALLING TO ${INSTALL}
-	@@ echo -------------------------------
+	@@ echo -----------------------------------
 	cp ${LIBFILE} ${INSTALL}
 
 clean:
