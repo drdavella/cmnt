@@ -7,9 +7,13 @@ CXXFLAGS = -std=gnu++11 -Wall -Werror -O3
 INCDIRS = -I. -I../../include
 LIBDIRS = 
 
-.PHONY: all install clean
+.PHONY: all install clean test
 
 all: ${LIBFILE}
+all: test
+
+test:
+	make -B -C test
 
 %.o: %.cpp
 	@@ echo

@@ -1,7 +1,3 @@
-#ifndef _CMNT_LISTER_CPP_
-#define _CMNT_LISTER_CPP_
-
-
 #include <cstdlib>
 #include <cstdio>
 #include <iostream>
@@ -15,8 +11,37 @@
 #include <ctime>
 #include <grp.h>
 #include <pwd.h>
+#include <error.h>
 #include <cmnt_lister.hpp>
 #include <boost/format.hpp>
+#include <math.h>
+
+#define MAX_LINE_LEN        256     // arbitrary
+#define MAX_NAME_LEN        32      // based on max Linux username
+#define SIX_MONTHS_SECS     (30 * 60 * 6)
+#define TIME_CHAR_BUF_SIZE  120
+
+#define ANSI_BLUE           "\x1b[0;34m"
+#define ANSI_LIGHT_CYAN     "\x1b[1;36m"
+#define ANSI_LIGHT_GREEN    "\x1b[1;32m"
+#define ANSI_NOTHING        "\x1b[0m"
+
+struct file_data {
+    char *name;
+    char modtime_s[TIME_CHAR_BUF_SIZE + 1] = {0};
+    char mode[MAX_NAME_LEN + 1] = {0};
+    struct stat stat;
+    mode_t file_type;
+};
+
+typedef std::map<gid_t,std::string> gid_map_t;
+typedef std::map<uid_t,std::string> uid_map_t;
+
+
+static size_t longest_name = 0;
+static size_t longest_owner = 0;
+static size_t longest_group = 0;
+static size_t longest_size = 0;
 
 
 static std::string mode_to_string(mode_t mode)
@@ -35,29 +60,44 @@ static std::string mode_to_string(mode_t mode)
     return result;
 }
 
-
-FileDataList * get_dir_listing(const char * dirname, bool long_list,
-                               bool list_all)
+static std::string get_ansi_color(struct file_data *f)
 {
+    switch (f->file_type)
+    {
+        case S_IFDIR:
+            return ANSI_BLUE;
+        case S_IFLNK:
+            return ANSI_LIGHT_CYAN;
+        default:
+            break;
+    }
+    // TODO: better rule for executable? Executable for me only?
+    if ((f->stat.st_mode & S_IXUSR) == S_IXUSR)
+    {
+        return ANSI_LIGHT_GREEN;
+    }
+    return ANSI_NOTHING;
+}
+
+
+int print_dir_listing(const char * dirname, bool long_list,bool list_all)
+{
+    int ret;
     DIR * dirp;
     struct dirent * dp;
-    struct stat statbuf;
-
 
     if ((dirp = opendir(dirname)) == NULL)
     {
-        return nullptr;
+        return -1;
     }
 
-    FileDataList * files = new FileDataList(long_list);
     std::string dirstring = dirname;
     // use these for caching to reduce syscalls
     gid_map_t gid_map;
     uid_map_t uid_map;
 
-    time_t now = time(NULL);
-
     // list all of the files in the directory
+    std::vector<struct file_data> files;
     while ((dp = readdir(dirp)) != NULL)
     {
         // ignore special files
@@ -76,217 +116,99 @@ FileDataList * get_dir_listing(const char * dirname, bool long_list,
         }
         std::string fullpath = dirstring + "/" + dp->d_name;
 
-        if (lstat(fullpath.c_str(),&statbuf) != 0)
+        struct file_data f;
+        if ((ret = lstat(fullpath.c_str(),&f.stat)) != 0)
         {
-            // log the error somehow
-            return nullptr;
+            // report the error somehow
+            fprintf(stderr,"stat error: %s\n",strerror(ret));
         }
 
-        files->add_data(FileData(dp->d_name,fullpath,statbuf,
-                                 gid_map,uid_map,now));
+        f.name = dp->d_name;
+        size_t len = strlen(f.name);
+        if (len > longest_name)
+        {
+            longest_name = len;
+        }
+        // modification time, which is what ls uses for sorting
+        f.file_type = f.stat.st_mode & S_IFMT;
+        files.push_back(f);
+    }
+
+    // sort here
+
+    char format_string[MAX_LINE_LEN + 1] = {0};
+    if (long_list)
+    {
+        size_t len;
+        time_t now = time(NULL);
+        struct group *grpbuf;
+        struct passwd *nambuf;
+        std::string time_format;
+
+        for (auto &f : files)
+        {
+            // cache the group name to avoid needless syscalls
+            if (gid_map.find(f.stat.st_gid) == gid_map.end())
+            {
+                grpbuf = getgrgid(f.stat.st_gid);
+                gid_map[f.stat.st_gid] = grpbuf->gr_name;
+                len = strlen(grpbuf->gr_name);
+                if (len > longest_group)
+                {
+                    longest_group = len;
+                }
+            }
+
+            // cache the user name to avoid needless syscalls
+            if (uid_map.find(f.stat.st_uid) == uid_map.end())
+            {
+                nambuf = getpwuid(f.stat.st_uid);
+                uid_map[f.stat.st_uid] = nambuf->pw_name;
+                len = strlen(nambuf->pw_name);
+                if (len > longest_owner)
+                {
+                    longest_owner = len;
+                }
+            }
+
+            // we also want the string representation, for when we print
+            if (f.stat.st_mtim.tv_sec - now > SIX_MONTHS_SECS)
+            {
+                time_format = "%b %e %Y";
+            }
+            else
+            {
+                time_format = "%b %e %H:%M";
+            }
+            strftime(f.modtime_s,TIME_CHAR_BUF_SIZE,time_format.c_str(),localtime(&f.stat.st_mtim.tv_sec));
+            strcpy(f.mode,(char *)mode_to_string(f.stat.st_mode).c_str());
+
+            if (f.stat.st_size > 0)
+            {
+                len = (int) log10(f.stat.st_size) + 1;
+                if (len > longest_size)
+                {
+                    longest_size = len;
+                }
+            }
+        }
+        // TODO: do we need a longest date field?
+        sprintf(format_string,"%%s %%%zds %%%zds %%%zdzd %%s %%s%%-%zds\x1b[0;0m",
+                longest_owner,longest_group,longest_size,longest_name);
+    }
+
+    for (auto &f : files)
+    {
+        if (long_list)
+        {
+            printf(format_string,f.mode,uid_map[f.stat.st_uid].c_str(),
+                   gid_map[f.stat.st_gid].c_str(),f.stat.st_size,
+                   f.modtime_s,get_ansi_color(&f).c_str(),f.name);
+        }
+        printf(" comment");
+        printf("\n");
     }
 
     closedir(dirp);
-    return files;
+    return 0;
 }
-
-
-void FileDataList::add_data(FileData data)
-{
-    if (data.name_len > longest_name)
-    {
-        longest_name = data.name_len;
-    }
-    if (long_list && (data.owner_len > longest_owner))
-    {
-        longest_owner = data.owner_len;
-    }
-    if (long_list && (data.group_len > longest_group))
-    {
-        longest_group = data.group_len;
-    }
-    if (long_list && (data.size_len > longest_size))
-    {
-        longest_size = data.size_len;
-    }
-    this->data.push_back(data);
-}
-
-
-void FileDataList::sort_by(sort_type_t sort)
-{
-    switch (sort)
-    {
-        case MODTIME:
-            std::sort(data.begin(),data.end(),FileData::compare_by_modtime());
-            break;
-        case NAME_REVERSE:
-            std::sort(data.begin(),data.end(),FileData::compare_by_name(true));
-            break;
-        case MODTIME_REVERSE:
-            std::sort(data.begin(),data.end(),FileData::compare_by_modtime(true));
-            break;
-        default:
-            std::sort(data.begin(),data.end(),FileData::compare_by_name());
-    }
-}
-
-
-std::string FileDataList::create_format_string(size_t term_width)
-{
-    std::string format;
-    if (long_list)
-    {
-        format = "%" + (boost::format("%ld") % longest_name).str() + "s";
-    }
-    else
-    {
-        format = "%s";
-    }
-
-    return format;
-}
-
-
-void FileDataList::list_data(std::ostream& stream, int term_width, bool color)
-{
-    std::string format = create_format_string(term_width);
-    for (auto x : data)
-    {
-        x.write_to_stream(stream,format,color);
-    }
-}
-
-
-FileData::FileData(std::string name, std::string path,
-                   struct stat statdata, gid_map_t& gid_map,
-                   uid_map_t& uid_map, time_t now,
-                   bool long_list)
-{
-    struct group * grpbuf;
-    struct passwd * nambuf;
-    char strbuf[TIME_CHAR_BUF_SIZE + 1] = { 0 };
-    std::string time_format;
-    this->name = name;
-    this->path = path;
-    name_len = name.size();
-
-    // modification time, which is what ls uses for sorting
-    modtime = statdata.st_mtim.tv_sec;
-    // mask off the bits indicating what kind of file this is
-    file_type = statdata.st_mode & S_IFMT;
-
-    if (long_list)
-    {
-        // cache the group name to avoid needless syscalls
-        if (gid_map.find(statdata.st_gid) == gid_map.end())
-        {
-            grpbuf = getgrgid(statdata.st_gid);
-            group = grpbuf->gr_name;
-            gid_map[statdata.st_gid] = group;
-        }
-        else
-        {
-            group = gid_map[statdata.st_gid];
-        }
-        // cache the user name to avoid needless syscalls
-        if (uid_map.find(statdata.st_uid) == uid_map.end())
-        {
-            nambuf = getpwuid(statdata.st_uid);
-            owner = nambuf->pw_name;
-            uid_map[statdata.st_uid] = owner;
-        }
-        else
-        {
-            owner = uid_map[statdata.st_uid];
-        }
-
-        num_bytes = statdata.st_size;
-        // modification time, which is what ls uses for sorting
-        modtime = statdata.st_mtim.tv_sec;
-        // we also want the string representation, for when we print
-        if (modtime - now > SIX_MONTHS_SECS)
-        {
-            time_format = "%b %e %Y";
-        }
-        else
-        {
-            time_format = "%b %e %H:%M";
-        }
-        strftime(strbuf,TIME_CHAR_BUF_SIZE,time_format.c_str(),
-                 localtime(&modtime));
-        modtime_string = strbuf;
-        mode_string = mode_to_string(statdata.st_mode);
-    }
-}
-
-
-std::string FileData::color_name_by_type()
-{
-    std::string color_name;
-    switch (file_type)
-    {
-        case S_IFLNK:
-            color_name += "\x1b[0;36m";
-            break;
-        case S_IFDIR:
-            color_name += "\x1b[0;34m";
-            break;
-        case S_IFBLK:
-        case S_IFCHR:
-            color_name += "\x1b[1;33;40m";
-            break;
-        // just a regular old file
-        default:
-            break;
-    }
-    color_name += name + "\x1b[0m";
-    return color_name;
-}
-
-
-void FileData::write_to_stream(std::ostream& stream, std::string format,
-                               bool color)
-{
-    std::string name_string;
-    if (color)
-    {
-        name_string = color_name_by_type();
-    }
-    else
-    {
-        name_string = name;
-    }
-    stream << boost::format(format) % name_string <<  std::endl;
-
-
-}
-
-
-std::function<bool (FileData,FileData)> FileData::compare_by_name(bool reverse)
-{
-    if (reverse)
-    {
-        return [](FileData f0, FileData f1) { return f0.name > f1.name; };
-    }
-    else
-    {
-        return [](FileData f0, FileData f1) { return f0.name < f1.name; };
-    }
-}
-
-
-std::function<bool (FileData,FileData)> FileData::compare_by_modtime(bool reverse)
-{
-    if (reverse)
-    {
-        return [](FileData f0, FileData f1) { return f0.modtime > f1.modtime; };
-    }
-    else
-    {
-        return [](FileData f0, FileData f1) { return f0.modtime < f1.modtime; };
-    }
-}
-
-
-#endif

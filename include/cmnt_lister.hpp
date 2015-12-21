@@ -2,12 +2,18 @@
 #define _CMNT_LISTER_HPP_
 
 #include <string>
-#include <FileData.hpp>
-#include <FileDataList.hpp>
+
+typedef enum sort_type
+{
+    DEFAULT_SORT,
+    MODTIME,
+    NAME_REVERSE,
+    MODTIME_REVERSE
+} sort_type_t;
 
 
-FileDataList * get_dir_listing(const char * dirname, bool long_list=false,
-                               bool list_all=false);
+int print_dir_listing(const char * dirname, bool long_list=false,
+                      bool list_all=false);
 
 
 #endif
