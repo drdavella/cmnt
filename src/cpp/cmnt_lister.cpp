@@ -88,6 +88,7 @@ int print_dir_listing(const char * dirname, bool long_list,bool list_all)
 
     if ((dirp = opendir(dirname)) == NULL)
     {
+        // TODO: appropriate error message here or in calling routine
         return -1;
     }
 
@@ -172,6 +173,7 @@ int print_dir_listing(const char * dirname, bool long_list,bool list_all)
             }
 
             // we also want the string representation, for when we print
+            // TODO: this logic seems to be broken
             if (f.stat.st_mtim.tv_sec - now > SIX_MONTHS_SECS)
             {
                 time_format = "%b %e %Y";
