@@ -82,7 +82,21 @@ static comparator_t choose_comparator(sort_type_t sort_type)
 {
     switch (sort_type)
     {
-
+        case MODTIME:
+            return [](file_data_t a, file_data_t b)
+            {
+                return a.stat.st_mtim.tv_sec < b.stat.st_mtim.tv_sec;
+            };
+        case NAME_REVERSE:
+            return [](file_data_t a, file_data_t b)
+            {
+                return strcasecmp(a.name,b.name) > 0;
+            };
+        case MODTIME_REVERSE:
+            return [](file_data_t a, file_data_t b)
+            {
+                return a.stat.st_mtim.tv_sec > b.stat.st_mtim.tv_sec;
+            };
         default:
             return [](file_data_t a, file_data_t b)
             {
