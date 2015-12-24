@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <algorithm>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -76,6 +77,10 @@ static std::string get_ansi_color(struct file_data *f)
     return ANSI_NOTHING;
 }
 
+static bool sort_by_name(const struct file_data a, const struct file_data b)
+{
+    return strcasecmp(a.name,b.name) < 0;
+}
 
 int print_dir_listing(const char * dirname, bool long_list,bool list_all)
 {
@@ -132,7 +137,7 @@ int print_dir_listing(const char * dirname, bool long_list,bool list_all)
         files.push_back(f);
     }
 
-    // sort here
+    std::sort( files.begin(), files.end(), sort_by_name );
 
     char format_string[MAX_LINE_LEN + 1] = {0};
     if (long_list)
