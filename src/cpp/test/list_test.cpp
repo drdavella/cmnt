@@ -15,5 +15,5 @@ int main(int argc, char ** argv)
     {
         path = ".";
     }
-    print_dir_listing(path.c_str(),true,true);
+    print_dir_listing(path.c_str(),false,true);
 }

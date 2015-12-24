@@ -200,6 +200,10 @@ int print_dir_listing(const char * dirname, bool long_list,bool list_all)
         sprintf(format_string,"%%s %%%zds %%%zds %%%zdzd %%s %%s%%-%zds\x1b[0;0m",
                 longest_owner,longest_group,longest_size,longest_name);
     }
+    else
+    {
+        sprintf(format_string,"%%s%%-%zds\x1b[0;0m",longest_name);
+    }
 
     for (auto &f : files)
     {
@@ -208,6 +212,10 @@ int print_dir_listing(const char * dirname, bool long_list,bool list_all)
             printf(format_string,f.mode,uid_map[f.stat.st_uid].c_str(),
                    gid_map[f.stat.st_gid].c_str(),f.stat.st_size,
                    f.modtime_s,get_ansi_color(&f).c_str(),f.name);
+        }
+        else
+        {
+            printf(format_string,get_ansi_color(&f).c_str(),f.name);
         }
         printf(" comment");
         printf("\n");
