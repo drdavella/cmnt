@@ -12,7 +12,7 @@
 #include <pwd.h>
 #include <error.h>
 #include <math.h>
-#include <cmnt_lister.hpp>
+#include <lister.hpp>
 
 #define MAX_LINE_LEN        256     // arbitrary
 #define MAX_NAME_LEN        32      // based on max Linux username
