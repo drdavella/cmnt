@@ -1,6 +1,5 @@
 #include <cstdlib>
 #include <cstdio>
-#include <iostream>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -8,13 +7,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
-#include <ctime>
 #include <grp.h>
 #include <pwd.h>
 #include <error.h>
-#include <cmnt_lister.hpp>
-#include <boost/format.hpp>
 #include <math.h>
+#include <cmnt_lister.hpp>
 
 #define MAX_LINE_LEN        256     // arbitrary
 #define MAX_NAME_LEN        32      // based on max Linux username
