@@ -78,9 +78,9 @@ static std::string get_ansi_color(file_data_t *f)
     return ANSI_NOTHING;
 }
 
-static comparator_t choose_comparator(sort_type_t type)
+static comparator_t choose_comparator(sort_type_t sort_type)
 {
-    switch (type)
+    switch (sort_type)
     {
 
         default:
@@ -91,7 +91,8 @@ static comparator_t choose_comparator(sort_type_t type)
     }
 }
 
-int print_dir_listing(const char * dirname, bool long_list, bool list_all)
+int print_dir_listing(const char * dirname, bool long_list, bool list_all,
+                      sort_type_t sort_type)
 {
     int ret;
     DIR * dirp;
@@ -146,7 +147,7 @@ int print_dir_listing(const char * dirname, bool long_list, bool list_all)
         files.push_back(f);
     }
 
-    std::sort( files.begin(), files.end(), choose_comparator(DEFAULT_SORT) );
+    std::sort( files.begin(), files.end(), choose_comparator(sort_type) );
 
     char format_string[MAX_LINE_LEN + 1] = {0};
     if (long_list)

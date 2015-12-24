@@ -13,7 +13,7 @@ typedef enum sort_type
 
 
 int print_dir_listing(const char * dirname, bool long_list=false,
-                      bool list_all=false);
+                      bool list_all=false, sort_type_t sort_type=DEFAULT_SORT);
 
 
 #endif
