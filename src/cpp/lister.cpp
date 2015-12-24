@@ -24,16 +24,17 @@
 #define ANSI_LIGHT_GREEN    "\x1b[1;32m"
 #define ANSI_NOTHING        "\x1b[0m"
 
-struct file_data {
+typedef struct file_data {
     char *name;
     char modtime_s[TIME_CHAR_BUF_SIZE + 1] = {0};
     char mode[MAX_NAME_LEN + 1] = {0};
     struct stat stat;
     mode_t file_type;
-};
+} file_data_t;
 
 typedef std::map<gid_t,std::string> gid_map_t;
 typedef std::map<uid_t,std::string> uid_map_t;
+typedef std::function<bool (file_data_t, file_data_t)> comparator_t;
 
 
 static size_t longest_name = 0;
@@ -58,7 +59,7 @@ static std::string mode_to_string(mode_t mode)
     return result;
 }
 
-static std::string get_ansi_color(struct file_data *f)
+static std::string get_ansi_color(file_data_t *f)
 {
     switch (f->file_type)
     {
@@ -77,12 +78,20 @@ static std::string get_ansi_color(struct file_data *f)
     return ANSI_NOTHING;
 }
 
-static bool sort_by_name(const struct file_data a, const struct file_data b)
+static comparator_t choose_comparator(sort_type_t type)
 {
-    return strcasecmp(a.name,b.name) < 0;
+    switch (type)
+    {
+
+        default:
+            return [](file_data_t a, file_data_t b)
+            {
+                return strcasecmp(a.name,b.name) < 0;
+            };
+    }
 }
 
-int print_dir_listing(const char * dirname, bool long_list,bool list_all)
+int print_dir_listing(const char * dirname, bool long_list, bool list_all)
 {
     int ret;
     DIR * dirp;
@@ -100,7 +109,7 @@ int print_dir_listing(const char * dirname, bool long_list,bool list_all)
     uid_map_t uid_map;
 
     // list all of the files in the directory
-    std::vector<struct file_data> files;
+    std::vector<file_data_t> files;
     while ((dp = readdir(dirp)) != NULL)
     {
         // ignore special files
@@ -119,7 +128,7 @@ int print_dir_listing(const char * dirname, bool long_list,bool list_all)
         }
         std::string fullpath = dirstring + "/" + dp->d_name;
 
-        struct file_data f;
+        file_data_t f;
         if ((ret = lstat(fullpath.c_str(),&f.stat)) != 0)
         {
             // report the error somehow
@@ -137,7 +146,7 @@ int print_dir_listing(const char * dirname, bool long_list,bool list_all)
         files.push_back(f);
     }
 
-    std::sort( files.begin(), files.end(), sort_by_name );
+    std::sort( files.begin(), files.end(), choose_comparator(DEFAULT_SORT) );
 
     char format_string[MAX_LINE_LEN + 1] = {0};
     if (long_list)
