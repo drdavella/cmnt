@@ -16,7 +16,7 @@
 
 #define MAX_LINE_LEN        256     // arbitrary
 #define MAX_NAME_LEN        32      // based on max Linux username
-#define SIX_MONTHS_SECS     (30 * 60 * 6)
+#define SIX_MONTHS_SECS     (6 * 30 * 24 * 60 * 60)
 #define TIME_CHAR_BUF_SIZE  120
 
 #define ANSI_BLUE           "\x1b[0;34m"
@@ -199,10 +199,9 @@ int print_dir_listing(const char * dirname, bool long_list, bool list_all,
             }
 
             // we also want the string representation, for when we print
-            // TODO: this logic seems to be broken
-            if (f.stat.st_mtim.tv_sec - now > SIX_MONTHS_SECS)
+            if (now - f.stat.st_mtim.tv_sec > SIX_MONTHS_SECS)
             {
-                time_format = "%b %e %Y";
+                time_format = "%b %e  %Y";
             }
             else
             {
@@ -220,7 +219,7 @@ int print_dir_listing(const char * dirname, bool long_list, bool list_all,
                 }
             }
         }
-        // TODO: do we need a longest date field?
+
         sprintf(format_string,"%%s %%%zds %%%zds %%%zdzd %%s %%s%%-%zds\x1b[0;0m",
                 longest_owner,longest_group,longest_size,longest_name);
     }
