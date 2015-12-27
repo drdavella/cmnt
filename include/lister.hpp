@@ -1,7 +1,8 @@
 #ifndef _CMNT_LISTER_HPP_
 #define _CMNT_LISTER_HPP_
 
-#include <string>
+#define LISTER_ERROR    (-1)
+
 
 typedef enum sort_type
 {

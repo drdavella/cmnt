@@ -11,6 +11,7 @@
 #include <grp.h>
 #include <pwd.h>
 #include <error.h>
+#include <errno.h>
 #include <math.h>
 #include <lister.hpp>
 
@@ -114,8 +115,8 @@ int print_dir_listing(const char * dirname, bool long_list, bool list_all,
 
     if ((dirp = opendir(dirname)) == NULL)
     {
-        // TODO: appropriate error message here or in calling routine
-        return -1;
+        fprintf(stderr,"cannot access %s: %s\n",dirname,strerror(errno));
+        return LISTER_ERROR;
     }
 
     std::string dirstring = dirname;
@@ -147,7 +148,8 @@ int print_dir_listing(const char * dirname, bool long_list, bool list_all,
         if ((ret = lstat(fullpath.c_str(),&f.stat)) != 0)
         {
             // report the error somehow
-            fprintf(stderr,"stat error: %s\n",strerror(ret));
+            fprintf(stderr,"unable to stat %s: %s\n",
+                    fullpath.c_str(),strerror(errno));
         }
 
         f.name = dp->d_name;
