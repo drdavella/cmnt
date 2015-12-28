@@ -50,3 +50,10 @@ int get_comment(std::string &message, const std::string path)
     message = msg;
     return 0;
 }
+
+int remove_comment(const std::string path)
+{
+    removexattr(path.c_str(),CMNT_MSG_FIELD);
+    removexattr(path.c_str(),CMNT_LEN_FIELD);
+    return 0;
+}

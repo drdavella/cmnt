@@ -8,6 +8,7 @@
 
 int add_comment(const std::string path, const std::string comment);
 int get_comment(std::string &message, const std::string path);
+int remove_comment(const std::string path);
 
 
 #endif
