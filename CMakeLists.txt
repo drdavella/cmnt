@@ -8,8 +8,10 @@ set( LIBSRC_DIR src/cpp )
 set( LIBTEST_DIR src/cpp/test )
 include_directories( include ${Boost_INCLUDE_DIR} )
 
-add_library( cmnt_core ${LIBSRC_DIR}/lister.cpp )
-target_link_libraries( cmnt_core m )
+add_library( lister ${LIBSRC_DIR}/lister.cpp )
+target_link_libraries( lister m )
+
+add_library( comment ${LIBSRC_DIR}/comment.cpp )
 
 add_executable( list_test ${LIBTEST_DIR}/list_test.cpp )
-target_link_libraries( list_test ${Boost_LIBRARIES} cmnt_core )
+target_link_libraries( list_test ${Boost_LIBRARIES} lister )
