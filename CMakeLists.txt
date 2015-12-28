@@ -16,7 +16,7 @@ add_library( comment ${LIBSRC_DIR}/comment.cpp )
 
 # Test programs (not CTests for now)
 add_executable( list_test ${LIBTEST_DIR}/list_test.cpp )
-target_link_libraries( list_test ${Boost_LIBRARIES} lister )
+target_link_libraries( list_test ${Boost_LIBRARIES} lister comment )
 
 add_executable( add_comment ${LIBTEST_DIR}/add_comment.cpp )
 target_link_libraries( add_comment ${Boost_LIBRARIES} comment )

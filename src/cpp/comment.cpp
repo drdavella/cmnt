@@ -26,5 +26,27 @@ int add_comment(const std::string path, const std::string comment)
 
 int get_comment(std::string &message, const std::string path)
 {
+    size_t len;
+    if (getxattr(path.c_str(),CMNT_LEN_FIELD,&len,sizeof(len)) <= 0)
+    {
+        if (errno == ENODATA)
+        {
+            return NO_COMMENT;
+        }
+        else
+        {
+            fprintf(stderr,"error reading length field: %s\n",strerror(errno));
+            return errno;
+        }
+    }
+
+    char msg[len + 1];
+    msg[len] = 0;
+    if ((size_t) getxattr(path.c_str(),CMNT_MSG_FIELD,msg,len) != len)
+    {
+        fprintf(stderr,"error reading message field: %s\n",strerror(errno));
+        return errno;
+    }
+    message = msg;
     return 0;
 }

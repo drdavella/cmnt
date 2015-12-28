@@ -15,6 +15,7 @@
 #include <errno.h>
 #include <math.h>
 #include <lister.hpp>
+#include <comment.hpp>
 
 #define MAX_LINE_LEN        256     // arbitrary
 #define MAX_NAME_LEN        32      // based on max Linux username
@@ -243,8 +244,15 @@ int print_dir_listing(const char * dirname, bool long_list, bool list_all,
         {
             printf(format_string,get_ansi_color(&f).c_str(),f.name);
         }
-        printf(" comment");
-        printf("\n");
+        std::string comment;
+        if (get_comment(comment, dirstring + "/" + f.name) == NO_COMMENT)
+        {
+            printf("\n");
+        }
+        else
+        {
+            printf(" %s\n",comment.c_str());
+        }
     }
 
     closedir(dirp);
