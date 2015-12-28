@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <functional>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
