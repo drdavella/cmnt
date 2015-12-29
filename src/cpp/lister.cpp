@@ -13,6 +13,8 @@
 #include <pwd.h>
 #include <error.h>
 #include <errno.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 #include <math.h>
 #include <lister.hpp>
 #include <comment.hpp>
@@ -21,6 +23,8 @@
 #define MAX_NAME_LEN        32      // based on max Linux username
 #define SIX_MONTHS_SECS     (6 * 30 * 24 * 60 * 60)
 #define TIME_CHAR_BUF_SIZE  120
+
+#define NUM_LONG_LIST_SPACES    6
 
 #define ANSI_BLUE           "\x1b[0;34m"
 #define ANSI_LIGHT_CYAN     "\x1b[1;36m"
@@ -167,6 +171,7 @@ int print_dir_listing(const char * dirname, bool long_list, bool list_all,
 
     std::sort( files.begin(), files.end(), choose_comparator(sort_type) );
 
+    size_t list_len = 0;
     char format_string[MAX_LINE_LEN + 1] = {0};
     if (long_list)
     {
@@ -223,14 +228,23 @@ int print_dir_listing(const char * dirname, bool long_list, bool list_all,
                 }
             }
         }
-
+        // 12 chars in the date/time, 10 in permissions string
+        list_len += NUM_LONG_LIST_SPACES + 12 + 10;
+        list_len += longest_owner + longest_group + longest_size + longest_name;
         sprintf(format_string,"%%s %%%zds %%%zds %%%zdzd %%s %%s%%-%zds\x1b[0;0m",
                 longest_owner,longest_group,longest_size,longest_name);
     }
     else
     {
+        list_len += longest_name + 1;
         sprintf(format_string,"%%s%%-%zds\x1b[0;0m",longest_name);
     }
+
+    // precompute formatting for overlong comments
+    struct winsize ws;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
+    size_t max_comment = ws.ws_col - list_len - 6; // for ". . . "
+    char long_comment[MAX_LINE_LEN + 1] = {0};
 
     for (auto &f : files)
     {
@@ -245,14 +259,18 @@ int print_dir_listing(const char * dirname, bool long_list, bool list_all,
             printf(format_string,get_ansi_color(&f).c_str(),f.name);
         }
         std::string comment;
-        if (get_comment(comment, dirstring + "/" + f.name) == NO_COMMENT)
+        if (get_comment(comment, dirstring + "/" + f.name) == 0)
         {
-            printf("\n");
+            if (comment.size() > max_comment)
+            {
+                printf(long_comment,comment.substr(0,max_comment).c_str());
+            }
+            else
+            {
+                printf(" \x1b[0;31m%s\x1b[0;0m",comment.c_str());
+            }
         }
-        else
-        {
-            printf(" %s\n",comment.c_str());
-        }
+        printf("\n");
     }
 
     closedir(dirp);
