@@ -7,36 +7,93 @@
 #include <comment.hpp>
 
 
-typedef void (*opt_handler)(std::vector<std::string> s);
+typedef void (*opt_handler)(std::string, std::vector<std::string>, bool);
 
-static void add_cmnt(std::vector<std::string> opts)
+static void add_cmnt(std::string filename, std::vector<std::string> opts,
+                     bool help)
+{
+}
+
+static void update_cmnt(std::string filename, std::vector<std::string> opts,
+                        bool help)
 {
 
 }
 
-static void update_cmnt(std::vector<std::string> opts)
+static void remove_cmnt(std::string filename, std::vector<std::string> opts,
+                        bool help)
 {
 
 }
 
-static void remove_cmnt(std::vector<std::string> opts)
+static void display_cmnt(std::string filename, std::vector<std::string> opts,
+                         bool help)
 {
 
 }
 
-static void display_cmnt(std::vector<std::string> opts)
+static void list_cmnts(std::string filename, std::vector<std::string> opts,
+                       bool help)
 {
+    namespace po = boost::program_options;
+    po::options_description args("Lister arguments");
+    args.add_options()
+        ("long,l", "print long listings for files")
+        ("all,a", "list all files (including dot files)")
+        ("reverse,r", "sort listings in reverse order")
+        ("time,t", "sort by last modification time")
+        ("help,h", "print this message and exit")
+    ;
+    if (help)
+    {
+        std::cout << "USAGE: cmnt list [path]\n";
+        std::cout << args << std::endl;
+        std::exit(1);
+    }
 
+    bool list_all = false;
+    bool long_listing = false;
+    sort_type_t sort_type = DEFAULT_SORT;
+    try
+    {
+        po::variables_map vm;
+        po::store(po::command_line_parser(opts)
+                    .options(args).run(), vm);
+        po::notify(vm);
+
+        if (vm.count("long"))
+        {
+            long_listing = true;
+        }
+        if (vm.count("all"))
+        {
+            list_all = true;
+        }
+        if (vm.count("reverse") && vm.count("time"))
+        {
+            sort_type = MODTIME_REVERSE;
+        }
+        else if (vm.count("time"))
+        {
+            sort_type = MODTIME;
+        }
+        else if (vm.count("reverse"))
+        {
+            sort_type = NAME_REVERSE;
+        }
+    }
+    catch ( const boost::program_options::error &e )
+    {
+        std::cerr << e.what() << std::endl;
+        std::exit(1);
+    }
+    print_dir_listing(filename.c_str(),long_listing,list_all,sort_type);
 }
 
-static void list_cmnts(std::vector<std::string> opts)
+static void help_and_exit(std::string filename, std::vector<std::string> opts,
+                          bool help=true)
 {
-
-}
-
-static void help_and_exit(std::vector<std::string> opts)
-{
-
+    std::cout << "help!\n";
 }
 
 static std::map<std::string, opt_handler> commands
@@ -54,18 +111,22 @@ int main(int argc, char ** argv)
     namespace po = boost::program_options;
     po::options_description main_arg;
     main_arg.add_options()
-        ("arg",     po::value<std::string>(),"")
-        ("subargs", po::value<std::string>(),"")
+        ("arg",         po::value<std::string>(),"")
+        ("filename",    po::value<std::string>(),"")
+        ("help,h",      "show this message and exit")
     ;
     po::positional_options_description main_pos;
-    main_pos.add("arg",1).add("subargs",-1);
+    main_pos.add("arg",1).add("filename",-1);
     po::parsed_options parsed = po::command_line_parser(argc,argv).
         options(main_arg).
         positional(main_pos).
         allow_unregistered().
         run();
 
+    bool help = false;
     std::string cmd = "";
+    std::string filename = "";
+    std::vector<std::string> opts;
     try
     {
         po::variables_map vm;
@@ -74,6 +135,14 @@ int main(int argc, char ** argv)
         {
             cmd = vm["arg"].as<std::string>();
         }
+        if (vm.count("filename"))
+        {
+            filename = vm["filename"].as<std::string>();
+        }
+        if (vm.count("help"))
+        {
+            help = true;
+        }
     }
     catch ( const po::error &e )
     {
@@ -81,12 +150,21 @@ int main(int argc, char ** argv)
         std::exit(1);
     }
 
+    opts = po::collect_unrecognized(parsed.options,po::include_positional);
     if (commands.find(cmd) != commands.end())
     {
-        std::vector<std::string> opts =
-            po::collect_unrecognized(parsed.options,po::include_positional);
+        if (!(help or cmd == "help") and filename == "")
+        {
+            std::cerr << "error: filename expected\n";
+            std::cerr << "use cmnt " << cmd << " --help for more information\n";
+            std::exit(1);
+        }
         opts.erase(opts.begin());
-        commands[cmd](opts);
+        commands[cmd](filename,opts,help);
+    }
+    else if (help)
+    {
+        help_and_exit(filename,opts);
     }
     else
     {
@@ -95,5 +173,6 @@ int main(int argc, char ** argv)
         {
             path = cmd;
         }
+        list_cmnts(path,opts,false);
     }
 }
