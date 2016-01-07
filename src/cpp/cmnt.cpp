@@ -27,7 +27,7 @@ static void add_cmnt(std::string filename, std::vector<std::string> opts,
     namespace po = boost::program_options;
     po::options_description args("Adder arguments");
     args.add_options()
-        ("comment,c", po::value<std::vector<std::string>>(), "comment text")
+        ("comment,c", po::value<std::string>(), "comment text")
         ("overwrite,o", "overwrite comment if one already exists")
         ("force,f", "overwrite existing comment without warning")
         ("help,h", "print this message and exit")
@@ -39,6 +39,7 @@ static void add_cmnt(std::string filename, std::vector<std::string> opts,
         std::exit(1);
     }
 
+    std::string comment = "";
     bool overwrite = false;
     bool force = false;
     try
@@ -55,6 +56,10 @@ static void add_cmnt(std::string filename, std::vector<std::string> opts,
         if (vm.count("force"))
         {
             force = true;
+        }
+        if (vm.count("comment"))
+        {
+            comment = vm["comment"].as<std::string>();
         }
     }
     catch ( const boost::program_options::error &e )
@@ -76,6 +81,8 @@ static void add_cmnt(std::string filename, std::vector<std::string> opts,
             return;
         }
     }
+
+    add_comment(filename,comment,overwrite);
 }
 
 static void update_cmnt(std::string filename, std::vector<std::string> opts,
