@@ -9,9 +9,73 @@
 
 typedef void (*opt_handler)(std::string, std::vector<std::string>, bool);
 
+
+static bool user_override(void)
+{
+    std::string input;
+    std::cout << "Overwrite existing comment? [Y/n]: ";
+    std::getline(std::cin,input);
+    if (input[0] == 'Y')
+        return true;
+
+    return false;
+}
+
 static void add_cmnt(std::string filename, std::vector<std::string> opts,
                      bool help)
 {
+    namespace po = boost::program_options;
+    po::options_description args("Adder arguments");
+    args.add_options()
+        ("comment,c", po::value<std::vector<std::string>>(), "comment text")
+        ("overwrite,o", "overwrite comment if one already exists")
+        ("force,f", "overwrite existing comment without warning")
+        ("help,h", "print this message and exit")
+    ;
+    if (help)
+    {
+        std::cout << "USAGE: cmnt add [path]\n";
+        std::cout << args << std::endl;
+        std::exit(1);
+    }
+
+    bool overwrite = false;
+    bool force = false;
+    try
+    {
+        po::variables_map vm;
+        po::store(po::command_line_parser(opts)
+                    .options(args).run(), vm);
+        po::notify(vm);
+
+        if (vm.count("overwrite"))
+        {
+            overwrite = true;
+        }
+        if (vm.count("force"))
+        {
+            force = true;
+        }
+    }
+    catch ( const boost::program_options::error &e )
+    {
+        std::cerr << e.what() << std::endl;
+        std::exit(1);
+    }
+
+    if (has_comment(filename))
+    {
+        if (not overwrite)
+        {
+            fprintf(stderr,"comment already exists\n");
+            return;
+        }
+        else if (not force and not user_override())
+        {
+            fprintf(stderr,"comment not written\n");
+            return;
+        }
+    }
 }
 
 static void update_cmnt(std::string filename, std::vector<std::string> opts,
