@@ -6,8 +6,15 @@
 #include <lister.hpp>
 #include <comment.hpp>
 
-
-typedef void (*opt_handler)(std::string, std::vector<std::string>, bool);
+struct command_args
+{
+    std::string filename;
+    std::vector<std::string> opts;
+    std::string comment;
+    bool needs_comment = true;
+    bool help = false;
+};
+typedef void (*opt_handler)(struct command_args);
 
 
 static bool user_override(void)
@@ -21,8 +28,7 @@ static bool user_override(void)
     return false;
 }
 
-static void add_cmnt(std::string filename, std::vector<std::string> opts,
-                     bool help)
+static void add_cmnt(struct command_args cargs)
 {
     namespace po = boost::program_options;
     po::options_description args("Adder arguments");
@@ -32,7 +38,7 @@ static void add_cmnt(std::string filename, std::vector<std::string> opts,
         ("force,f", "overwrite existing comment without warning")
         ("help,h", "print this message and exit")
     ;
-    if (help)
+    if (cargs.help)
     {
         std::cout << "USAGE: cmnt add [path]\n";
         std::cout << args << std::endl;
@@ -45,7 +51,7 @@ static void add_cmnt(std::string filename, std::vector<std::string> opts,
     try
     {
         po::variables_map vm;
-        po::store(po::command_line_parser(opts)
+        po::store(po::command_line_parser(cargs.opts)
                     .options(args).run(), vm);
         po::notify(vm);
 
@@ -68,7 +74,7 @@ static void add_cmnt(std::string filename, std::vector<std::string> opts,
         std::exit(1);
     }
 
-    if (has_comment(filename))
+    if (has_comment(cargs.filename))
     {
         if (not overwrite)
         {
@@ -82,29 +88,25 @@ static void add_cmnt(std::string filename, std::vector<std::string> opts,
         }
     }
 
-    add_comment(filename,comment,overwrite);
+    add_comment(cargs.filename,cargs.comment,overwrite);
 }
 
-static void update_cmnt(std::string filename, std::vector<std::string> opts,
-                        bool help)
+static void update_cmnt(struct command_args cargs)
 {
 
 }
 
-static void remove_cmnt(std::string filename, std::vector<std::string> opts,
-                        bool help)
+static void remove_cmnt(struct command_args cargs)
 {
 
 }
 
-static void display_cmnt(std::string filename, std::vector<std::string> opts,
-                         bool help)
+static void display_cmnt(struct command_args cargs)
 {
 
 }
 
-static void list_cmnts(std::string filename, std::vector<std::string> opts,
-                       bool help)
+static void list_cmnts(struct command_args cargs)
 {
     namespace po = boost::program_options;
     po::options_description args("Lister arguments");
@@ -115,7 +117,7 @@ static void list_cmnts(std::string filename, std::vector<std::string> opts,
         ("time,t", "sort by last modification time")
         ("help,h", "print this message and exit")
     ;
-    if (help)
+    if (cargs.help)
     {
         std::cout << "USAGE: cmnt list [path]\n";
         std::cout << args << std::endl;
@@ -128,7 +130,7 @@ static void list_cmnts(std::string filename, std::vector<std::string> opts,
     try
     {
         po::variables_map vm;
-        po::store(po::command_line_parser(opts)
+        po::store(po::command_line_parser(cargs.opts)
                     .options(args).run(), vm);
         po::notify(vm);
 
@@ -158,11 +160,10 @@ static void list_cmnts(std::string filename, std::vector<std::string> opts,
         std::cerr << e.what() << std::endl;
         std::exit(1);
     }
-    print_dir_listing(filename.c_str(),long_listing,list_all,sort_type);
+    print_dir_listing(cargs.filename.c_str(),long_listing,list_all,sort_type);
 }
 
-static void help_and_exit(std::string filename, std::vector<std::string> opts,
-                          bool help=true)
+static void help_and_exit(struct command_args cargs)
 {
     std::cout << "help!\n";
 }
@@ -184,6 +185,7 @@ int main(int argc, char ** argv)
     main_arg.add_options()
         ("arg",         po::value<std::string>(),"")
         ("filename",    po::value<std::string>(),"")
+        ("comment,c",   po::value<std::string>(),"")
         ("help,h",      "show this message and exit")
     ;
     po::positional_options_description main_pos;
@@ -194,10 +196,8 @@ int main(int argc, char ** argv)
         allow_unregistered().
         run();
 
-    bool help = false;
     std::string cmd = "";
-    std::string filename = "";
-    std::vector<std::string> opts;
+    struct command_args cargs;
     try
     {
         po::variables_map vm;
@@ -208,11 +208,16 @@ int main(int argc, char ** argv)
         }
         if (vm.count("filename"))
         {
-            filename = vm["filename"].as<std::string>();
+            cargs.filename = vm["filename"].as<std::string>();
+        }
+        if (vm.count("comment"))
+        {
+            cargs.needs_comment = false;
+            cargs.comment = vm["comment"].as<std::string>();
         }
         if (vm.count("help"))
         {
-            help = true;
+            cargs.help = true;
         }
     }
     catch ( const po::error &e )
@@ -221,29 +226,30 @@ int main(int argc, char ** argv)
         std::exit(1);
     }
 
-    opts = po::collect_unrecognized(parsed.options,po::include_positional);
+    cargs.opts = po::collect_unrecognized(parsed.options,po::include_positional);
     if (commands.find(cmd) != commands.end())
     {
-        if (!(help or cmd == "help") and filename == "")
+        if (!(cargs.help or cmd == "help") and cargs.filename == "")
         {
             std::cerr << "error: filename expected\n";
             std::cerr << "use cmnt " << cmd << " --help for more information\n";
             std::exit(1);
         }
-        opts.erase(opts.begin());
-        commands[cmd](filename,opts,help);
+        cargs.opts.erase(cargs.opts.begin());
+        commands[cmd](cargs);
     }
-    else if (help)
+    else if (cargs.help)
     {
-        help_and_exit(filename,opts);
+        help_and_exit(cargs);
     }
     else
     {
-        std::string path = ".";
+        cargs.filename = ".";
         if (cmd != "")
         {
-            path = cmd;
+            cargs.filename = cmd;
         }
-        list_cmnts(path,opts,false);
+        cargs.help = false;
+        list_cmnts(cargs);
     }
 }
