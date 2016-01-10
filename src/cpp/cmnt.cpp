@@ -5,6 +5,7 @@
 #include <boost/program_options.hpp>
 #include <lister.hpp>
 #include <comment.hpp>
+#include <comment_editor.hpp>
 
 struct command_args
 {
@@ -88,6 +89,15 @@ static void add_cmnt(struct command_args cargs)
         }
     }
 
+    if (cargs.needs_comment)
+    {
+        cargs.comment = new_comment_from_file(cargs.filename);
+        if (cargs.comment == "")
+        {
+            fprintf(stdout,"No comment added due to empty comment message\n");
+            std::exit(0);
+        }
+    }
     add_comment(cargs.filename,cargs.comment,overwrite);
 }
 

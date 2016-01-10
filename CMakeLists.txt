@@ -13,8 +13,10 @@ target_link_libraries( lister m )
 
 add_library( comment ${LIBSRC_DIR}/comment.cpp )
 
+add_library( editor ${LIBSRC_DIR}/comment_editor.cpp )
+
 add_executable( cmnt ${LIBSRC_DIR}/cmnt.cpp )
-target_link_libraries( cmnt ${Boost_LIBRARIES} lister comment )
+target_link_libraries( cmnt ${Boost_LIBRARIES} lister comment editor )
 
 # Test programs (not CTests for now)
 add_executable( list_test ${LIBTEST_DIR}/list_test.cpp )
