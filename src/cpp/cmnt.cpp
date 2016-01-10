@@ -112,7 +112,56 @@ static void update_cmnt(struct command_args cargs)
 
 static void remove_cmnt(struct command_args cargs)
 {
+    namespace po = boost::program_options;
+    po::options_description args("remove arguments");
+    args.add_options()
+        ("force,f", "overwrite existing comment without warning")
+        ("silent,s","do not report if comment does not exist")
+        ("help,h", "print this message and exit")
+    ;
+    if (cargs.help)
+    {
+        std::cout << "USAGE: cmnt remove [path]\n";
+        std::cout << args << std::endl;
+        std::exit(1);
+    }
 
+    bool force = false;
+    bool silent = false;
+    try
+    {
+        po::variables_map vm;
+        po::store(po::command_line_parser(cargs.opts)
+                    .options(args).run(), vm);
+        po::notify(vm);
+
+        if (vm.count("force"))
+        {
+            force = true;
+        }
+        if (vm.count("silent"))
+        {
+            silent = true;
+        }
+    }
+    catch ( const boost::program_options::error &e )
+    {
+        std::cerr << e.what() << std::endl;
+        std::exit(1);
+    }
+
+    if (not silent and not has_comment(cargs.filename))
+    {
+        std::cerr << "no comment to remove for " << cargs.filename << std::endl;
+        std::exit(0);
+    }
+    if (not force and not user_override())
+    {
+        std::cerr << "comment not removed\n";
+        std::exit(0);
+    }
+
+    remove_comment(cargs.filename);
 }
 
 static void display_cmnt(struct command_args cargs)
