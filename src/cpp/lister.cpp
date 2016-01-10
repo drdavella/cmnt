@@ -244,7 +244,6 @@ int print_dir_listing(const char * dirname, bool long_list, bool list_all,
     struct winsize ws;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
     size_t max_comment = ws.ws_col - list_len - 6; // for ". . . "
-    char long_comment[MAX_LINE_LEN + 1] = {0};
 
     for (auto &f : files)
     {
@@ -263,7 +262,8 @@ int print_dir_listing(const char * dirname, bool long_list, bool list_all,
         {
             if (comment.size() > max_comment)
             {
-                printf(long_comment,comment.substr(0,max_comment).c_str());
+                printf(" \x1b[0;31m%s. . .\x1b[0;0m",
+                       comment.substr(0,max_comment).c_str());
             }
             else
             {
