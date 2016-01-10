@@ -258,8 +258,8 @@ int main(int argc, char ** argv)
         }
         if (access(cargs.filename.c_str(),F_OK) != 0)
         {
-            fprintf(stderr,"cannot access %s: %s\n",cargs.filename.c_str(),
-                    strerror(errno));
+            std::cerr << "cannot access " << cargs.filename.c_str() << ": ";
+            std::cerr << strerror(errno) << std::endl;
             std::exit(1);
         }
         cargs.opts.erase(cargs.opts.begin());
