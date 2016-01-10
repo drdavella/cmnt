@@ -63,13 +63,19 @@ static std::string parse_comment_file(std::string filename)
         std::exit(1);
     }
 
+    size_t line_count = 0;
     std::string line;
     while (std::getline(temp, line))
     {
         if (line == "") continue;
         if (line[0] == '#') continue;
 
+        if (line_count > 0)
+        {
+            comment += "\n";
+        }
         comment += line;
+        line_count++;
     }
 
     temp.close();

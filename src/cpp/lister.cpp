@@ -260,6 +260,7 @@ int print_dir_listing(const char * dirname, bool long_list, bool list_all,
         std::string comment;
         if (get_comment(comment, dirstring + "/" + f.name) == 0)
         {
+            std::replace(comment.begin(), comment.end(), '\n', ' ');
             if (comment.size() > max_comment)
             {
                 printf(" \x1b[0;31m%s. . .\x1b[0;0m",
