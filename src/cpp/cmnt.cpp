@@ -1,7 +1,11 @@
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <map>
+#include <unistd.h>
+#include <error.h>
+#include <errno.h>
 #include <boost/program_options.hpp>
 #include <lister.hpp>
 #include <comment.hpp>
@@ -250,6 +254,12 @@ int main(int argc, char ** argv)
         {
             std::cerr << "error: filename expected\n";
             std::cerr << "use cmnt " << cmd << " --help for more information\n";
+            std::exit(1);
+        }
+        if (access(cargs.filename.c_str(),F_OK) != 0)
+        {
+            fprintf(stderr,"cannot access %s: %s\n",cargs.filename.c_str(),
+                    strerror(errno));
             std::exit(1);
         }
         cargs.opts.erase(cargs.opts.begin());
