@@ -113,7 +113,14 @@ static void remove_cmnt(struct command_args cargs)
 
 static void display_cmnt(struct command_args cargs)
 {
-
+    std::string comment = "";
+    get_comment(comment,cargs.filename);
+    if (comment == "")
+    {
+        std::cerr << "no comment found for " << cargs.filename << std::endl;
+        std::exit(0);
+    }
+    display_comment(comment);
 }
 
 static void list_cmnts(struct command_args cargs)
