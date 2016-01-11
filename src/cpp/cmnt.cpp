@@ -36,7 +36,7 @@ static bool user_override(void)
 static void add_cmnt(struct command_args cargs)
 {
     namespace po = boost::program_options;
-    po::options_description args("Adder arguments");
+    po::options_description args("add arguments");
     args.add_options()
         ("comment,c", po::value<std::string>(), "comment text")
         ("overwrite,o", "overwrite comment if one already exists")
@@ -50,7 +50,6 @@ static void add_cmnt(struct command_args cargs)
         std::exit(1);
     }
 
-    std::string comment = "";
     bool overwrite = false;
     bool force = false;
     try
@@ -67,10 +66,6 @@ static void add_cmnt(struct command_args cargs)
         if (vm.count("force"))
         {
             force = true;
-        }
-        if (vm.count("comment"))
-        {
-            comment = vm["comment"].as<std::string>();
         }
     }
     catch ( const boost::program_options::error &e )
@@ -107,7 +102,47 @@ static void add_cmnt(struct command_args cargs)
 
 static void update_cmnt(struct command_args cargs)
 {
+    namespace po = boost::program_options;
+    po::options_description args("update arguments");
+    args.add_options()
+        ("comment,c", po::value<std::string>(), "comment text")
+        ("help,h", "print this message and exit")
+    ;
+    if (cargs.help)
+    {
+        std::cout << "USAGE: cmnt update [path]\n";
+        std::cout << args << std::endl;
+        std::exit(1);
+    }
 
+    if (not has_comment(cargs.filename))
+    {
+        std::cerr << "cannot update comment for " << cargs.filename << ": ";
+        std::cerr << "no comment exists\n";
+        std::cerr << "use cmnt add [filename] to create new\n";
+        std::exit(1);
+    }
+
+    if (cargs.needs_comment)
+    {
+        std::string old_comment = "";
+        get_comment(old_comment,cargs.filename);
+        std::string new_comment = update_comment_from_file(cargs.filename,
+                                                           old_comment);
+        if (new_comment == "")
+        {
+            fprintf(stdout,"No changes due to empty comment message\n");
+            std::exit(0);
+        }
+        if (old_comment == new_comment)
+        {
+            fprintf(stdout,"New comment same as previous comment: no update\n");
+            std::exit(0);
+        }
+        cargs.comment = new_comment;
+    }
+
+    update_comment(cargs.filename,cargs.comment);
 }
 
 static void remove_cmnt(struct command_args cargs)
@@ -179,7 +214,7 @@ static void display_cmnt(struct command_args cargs)
 static void list_cmnts(struct command_args cargs)
 {
     namespace po = boost::program_options;
-    po::options_description args("Lister arguments");
+    po::options_description args("list arguments");
     args.add_options()
         ("long,l", "print long listings for files")
         ("all,a", "list all files (including dot files)")

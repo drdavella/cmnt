@@ -127,11 +127,23 @@ std::string new_comment_from_file(std::string filename)
 }
 
 
-std::string update_comment_from_file(std::string filename)
+std::string update_comment_from_file(std::string filename, std::string comment)
 {
-    std::string comment = "";
+    std::string editor = get_editor();
+    std::string temp = create_temp_file(comment);
 
-    return comment;
+    std::string cmd = editor + " " + temp;
+    if (system(cmd.c_str()) < 0)
+    {
+        fprintf(stderr,"unable to use %s editor: "
+                "make sure $EDITOR is set properly",editor.c_str());
+        std::exit(1);
+    }
+
+    std::string new_comment = parse_comment_file(temp);
+
+    remove_file(temp);
+    return new_comment;
 }
 
 

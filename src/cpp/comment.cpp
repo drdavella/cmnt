@@ -42,6 +42,12 @@ int add_comment(const std::string path, const std::string comment, bool force)
     return 0;
 }
 
+int update_comment(const std::string path, const std::string comment)
+{
+    // for now, update comment and add comment do the same thing...
+    return add_comment(path,comment,true);
+}
+
 int get_comment(std::string &message, const std::string path)
 {
     size_t len;
