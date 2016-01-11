@@ -201,6 +201,12 @@ static void remove_cmnt(struct command_args cargs)
 
 static void display_cmnt(struct command_args cargs)
 {
+    if (cargs.help)
+    {
+        std::cout << "USAGE: cmnt display [path]\n";
+        std::exit(1);
+    }
+
     std::string comment = "";
     get_comment(comment,cargs.filename);
     if (comment == "")
@@ -331,16 +337,17 @@ int main(int argc, char ** argv)
         std::exit(1);
     }
 
+    bool help = cargs.help or cmd == "help";
     cargs.opts = po::collect_unrecognized(parsed.options,po::include_positional);
     if (commands.find(cmd) != commands.end())
     {
-        if (!(cargs.help or cmd == "help") and cargs.filename == "")
+        if (not help and cargs.filename == "")
         {
             std::cerr << "error: filename expected\n";
             std::cerr << "use cmnt " << cmd << " --help for more information\n";
             std::exit(1);
         }
-        if (access(cargs.filename.c_str(),F_OK) != 0)
+        if (not help and access(cargs.filename.c_str(),F_OK) != 0)
         {
             std::cerr << "cannot access " << cargs.filename.c_str() << ": ";
             std::cerr << strerror(errno) << std::endl;
