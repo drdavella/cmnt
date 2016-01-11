@@ -20,10 +20,10 @@ bool has_comment(std::string path)
 }
 
 
-int add_comment(const std::string path, const std::string comment, bool force)
+int add_comment(const std::string path, const std::string comment, bool overwrite)
 {
     int flags = XATTR_CREATE;
-    if (force)
+    if (overwrite)
     {
         flags = XATTR_REPLACE;
     }
